@@ -1,0 +1,205 @@
+<title>MPC Race Car</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --bg:#0a0e14;
+    --panel:#0f1521;
+    --panel-2:#131b29;
+    --line:#22303f;
+    --line-soft:#1a2432;
+    --text:#dfe6ee;
+    --text-dim:#7c8aa0;
+    --text-faint:#4d5b70;
+    --accent:#4fd1c5;
+    --accent-dim:#2a6e68;
+    --good:#57d38c;
+    --warn:#e8b34d;
+    --crit:#e5566b;
+    --thrust:#ff8a5c;
+    --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+    --sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{background:var(--bg);}
+  body{
+    margin:0;
+    font-family:var(--sans);
+    color:var(--text);
+    background:var(--bg);
+    padding:20px 20px 40px;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent);}
+  .wrap{max-width:1180px;margin:0 auto;}
+
+  header{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    gap:24px;flex-wrap:wrap;
+    border-bottom:1px solid var(--line);
+    padding-bottom:16px;margin-bottom:18px;
+  }
+  .title-block h1{font-family:var(--sans);font-weight:700;font-size:26px;letter-spacing:0.01em;margin:0 0 4px;text-wrap:balance;}
+  .title-block .sub{font-family:var(--mono);font-size:12.5px;color:var(--text-dim);letter-spacing:0.02em;}
+  .badge{
+    font-family:var(--mono);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--accent);border:1px solid var(--accent-dim);background:rgba(79,209,197,0.08);
+    padding:5px 10px;border-radius:3px;white-space:nowrap;
+  }
+
+  .console{display:grid;grid-template-columns:1fr 300px;gap:16px;}
+  @media (max-width:860px){.console{grid-template-columns:1fr;}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;}
+  .panel-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 14px;border-bottom:1px solid var(--line-soft);
+    font-family:var(--mono);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);
+  }
+  .status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--good);margin-right:6px;box-shadow:0 0 6px var(--good);}
+  .status-dot.warn{background:var(--warn);box-shadow:0 0 6px var(--warn);}
+  .status-dot.crit{background:var(--crit);box-shadow:0 0 6px var(--crit);}
+
+  .viewport-wrap{padding:12px;}
+  canvas#scene{width:100%;display:block;border-radius:4px;background:#0c1119;}
+  .transport{display:flex;align-items:center;gap:12px;padding:10px 14px 14px;}
+  .btn{
+    font-family:var(--mono);font-size:12px;background:var(--panel-2);border:1px solid var(--line);
+    color:var(--text);padding:7px 14px;border-radius:4px;cursor:pointer;letter-spacing:0.04em;
+  }
+  .btn:hover{border-color:var(--accent-dim);color:var(--accent);}
+  .btn:focus-visible, input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .scrub{flex:1;-webkit-appearance:none;height:3px;background:var(--line);border-radius:2px;outline:none;}
+  .scrub::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 6px rgba(79,209,197,0.7);}
+  .scrub::-moz-range-thumb{width:13px;height:13px;border-radius:50%;border:none;background:var(--accent);cursor:pointer;}
+  .met{font-family:var(--mono);font-size:12px;color:var(--text-dim);white-space:nowrap;font-variant-numeric:tabular-nums;}
+
+  .strips{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 12px 14px;}
+  @media (max-width:560px){.strips{grid-template-columns:1fr;}}
+  .strip-title{font-family:var(--mono);font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);margin:0 0 4px;}
+  canvas.strip{width:100%;height:64px;display:block;}
+
+  .rail{display:flex;flex-direction:column;gap:16px;}
+  .telemetry{padding:12px 14px 14px;}
+  .tele-row{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line-soft);}
+  .tele-row:last-child{border-bottom:none;}
+  .tele-label{font-size:11.5px;color:var(--text-dim);letter-spacing:0.02em;}
+  .tele-val{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums;}
+  .tele-val .unit{font-size:11px;color:var(--text-faint);margin-left:3px;}
+  .tele-val.good{color:var(--good);}
+  .tele-val.warn{color:var(--warn);}
+
+  .controls{padding:12px 14px 16px;}
+  .ctrl{margin-bottom:14px;}
+  .ctrl:last-child{margin-bottom:0;}
+  .ctrl-label{display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-dim);margin-bottom:6px;}
+  .ctrl-label b{font-family:var(--mono);color:var(--text);font-weight:500;}
+  input[type=range]{width:100%;-webkit-appearance:none;height:3px;background:var(--line);border-radius:2px;outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--text);cursor:pointer;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--line);}
+  input[type=range]:hover::-webkit-slider-thumb{background:var(--accent);}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;border:2px solid var(--panel);background:var(--text);cursor:pointer;}
+
+  .result-line{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:12px;color:var(--text-dim);padding-top:4px;}
+
+  .explainer{padding:16px 18px;margin-top:16px;}
+  .explainer h2{font-size:15px;margin:0 0 8px;letter-spacing:0.01em;}
+  .explainer p{font-size:13.5px;line-height:1.65;color:var(--text-dim);max-width:66ch;margin:0 0 10px;}
+  .explainer p:last-child{margin-bottom:0;}
+  .explainer .term{font-family:var(--mono);color:var(--text);font-size:0.94em;}
+  .explainer .accent-term{color:var(--accent);}
+  footer{text-align:center;color:var(--text-faint);font-family:var(--mono);font-size:11px;margin-top:22px;letter-spacing:0.03em;}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="title-block">
+      <h1>MPC Race Car</h1>
+      <div class="sub">RECEDING-HORIZON CONTROL &middot; PATH-FOLLOWING BICYCLE MODEL &middot; OVAL CIRCUIT</div>
+    </div>
+    <div class="badge">GNC SIM &middot; MODEL: LINIGER ET AL. 2015</div>
+  </header>
+
+  <div class="console">
+    <div class="main-col">
+      <div class="panel">
+        <div class="panel-head">
+          <span><span class="status-dot" id="statusDot"></span><span id="statusText">NOMINAL</span></span>
+          <span id="phaseLabel">ON TRACK</span>
+        </div>
+        <div class="viewport-wrap">
+          <canvas id="scene" width="1600" height="620"></canvas>
+        </div>
+        <div class="transport">
+          <button class="btn" id="playBtn">&#9654; PLAY</button>
+          <input type="range" id="scrub" class="scrub" min="0" max="1000" value="0" step="1" aria-label="Scrub through the lap">
+          <span class="met" id="metLabel">T+00.0s / 00.0s</span>
+        </div>
+        <div class="strips">
+          <div>
+            <div class="strip-title">Speed vs. Time</div>
+            <canvas class="strip" id="stripSpeed" width="600" height="80"></canvas>
+          </div>
+          <div>
+            <div class="strip-title">Steering Angle vs. Time</div>
+            <canvas class="strip" id="stripSteer" width="600" height="80"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel explainer">
+        <h2>Why this replans every step</h2>
+        <p>
+          The car's state is expressed in <span class="term">Frenet (path) coordinates</span> relative
+          to the track centerline: progress <span class="term">s</span>, lateral deviation
+          <span class="term">e_y</span>, heading error <span class="term">e_psi</span>, and speed
+          <span class="term">v</span>. That turns "stay on track" into a simple bound on e_y and
+          "go fast" into a speed-tracking cost, instead of needing a hand-designed reference
+          trajectory &mdash; the same trick used in real racing-MPC research
+          (Liniger, Domahidi &amp; Morari, 2015) closely related to Berkeley's own
+          <span class="term">BARC</span> platform and MPC Lab.
+        </p>
+        <p>
+          At every control step, a 15-step, 2.25s-horizon optimal control problem is
+          <span class="accent-term">re-solved from the current state</span> (receding-horizon
+          control / MPC) subject to steering, acceleration, speed, and track-corridor limits,
+          warm-started from the previous step's shifted solution. Only the first control is
+          applied before the next re-solve &mdash; unlike the single open-loop solve in the
+          powered-descent-guidance project, this controller is closing the loop in real time.
+        </p>
+        <p>
+          Move the sliders to change the target speed or drop an obstacle onto the track and
+          watch the controller find a different line to hold the corridor.
+        </p>
+      </div>
+    </div>
+
+    <div class="rail">
+      <div class="panel telemetry">
+        <div class="panel-head" style="border:none;padding:0 0 8px;">TELEMETRY</div>
+        <div class="tele-row"><span class="tele-label">Speed</span><span class="tele-val" id="tSpeed">&mdash;</span></div>
+        <div class="tele-row"><span class="tele-label">Steering angle</span><span class="tele-val" id="tSteer">&mdash;</span></div>
+        <div class="tele-row"><span class="tele-label">Accel / brake</span><span class="tele-val" id="tAccel">&mdash;</span></div>
+        <div class="tele-row"><span class="tele-label">Lateral error</span><span class="tele-val" id="tEy">&mdash;</span></div>
+        <div class="tele-row"><span class="tele-label">Heading error</span><span class="tele-val" id="tEpsi">&mdash;</span></div>
+        <div class="tele-row"><span class="tele-label">Track progress</span><span class="tele-val" id="tProg">&mdash;</span></div>
+      </div>
+
+      <div class="panel controls">
+        <div class="panel-head" style="border:none;padding:0 0 10px;">TARGETING</div>
+        <div class="ctrl">
+          <div class="ctrl-label"><span>Target speed</span><b id="lblV0"></b></div>
+          <input type="range" id="sV0" min="0" max="2" step="1" value="1" aria-label="Target cruising speed">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-label"><span>Obstacle</span><b id="lblObs"></b></div>
+          <input type="range" id="sObs" min="0" max="2" step="1" value="0" aria-label="Obstacle placement">
+        </div>
+        <div class="result-line"><span>Lap time</span><span id="rLapTime">&mdash;</span></div>
+        <div class="result-line"><span>Avg. speed</span><span id="rAvgSpeed">&mdash;</span></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>KINEMATIC BICYCLE MODEL &middot; WHEELBASE 2.7 m &middot; NOT PRODUCTION CONTROL SOFTWARE</footer>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
